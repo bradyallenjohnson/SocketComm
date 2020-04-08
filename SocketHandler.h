@@ -10,6 +10,7 @@
 #include <time.h>
 
 #include "MessageHandler.h"
+#include "SocketAddrIn.h"
 
 using namespace std;
 
@@ -36,6 +37,7 @@ class SocketHandler
 
     const static int MAX_MESSAGE_LENGTH;
     const static string LOCAL_HOST_STR;
+    const static string LOCAL_HOST_IPV6_STR;
 
     enum SOCKET_HANDLER_MODE
     {
@@ -109,8 +111,8 @@ class SocketHandler
     fd_set allSocketFdWriteSet_;
     fd_set allSocketFdErrorSet_;
 
-    struct sockaddr_in socketAddress_;
-    struct sockaddr_in remoteAddress_;
+    SocketAddrIn socketAddress_;
+    SocketAddrIn remoteAddress_;
     socklen_t remoteAddrLen_;
     SocketHandler::SocketHandlerStatistics stats_;
 

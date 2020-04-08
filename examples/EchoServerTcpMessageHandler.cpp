@@ -10,12 +10,13 @@
 
 #include "SocketHandler.h"
 #include "EchoServerTcpMessageHandler.h"
+#include "SocketAddrIn.h"
 
 using namespace std;
 
 // virtual
 void EchoServerTcpMessageHandler::handleConnect(int clientKey,
-                                                const struct sockaddr_in &clientAddr,
+                                                const SocketAddrIn &clientAddr,
                                                 socklen_t clientAddrLen)
 {
   // We could also store the clientAddr associated with the clientKey
@@ -33,7 +34,7 @@ void EchoServerTcpMessageHandler::handleConnect(int clientKey,
 void EchoServerTcpMessageHandler::handleMessage(int clientKey,
                                           char *requestMsg,
                                           int requestMsgLength,
-                                          struct sockaddr_in *clientAddr,
+                                          const SocketAddrIn &clientAddr,
                                           MessageHandler::SocketMessage *responseMsg) /* default NULL */
 {
   if(!responseMsg)

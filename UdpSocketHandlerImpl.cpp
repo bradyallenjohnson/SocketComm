@@ -25,7 +25,7 @@ UdpSocketHandlerImpl::UdpSocketHandlerImpl(int port,
 // virtual
 bool UdpSocketHandlerImpl::initializeSpecific()
 {
-  socketFd_ = socket(AF_INET, SOCK_DGRAM, 0);
+  socketFd_ = socket((socketAddress_.isIpv6 ? AF_INET6 : AF_INET), SOCK_DGRAM, 0);
   if(socketFd_ < 0)
   {
     int theError(errno);
@@ -37,7 +37,10 @@ bool UdpSocketHandlerImpl::initializeSpecific()
 
   if(mode_ == SocketHandler::MODE_SERVER)
   {
-    if(bind(socketFd_, (struct sockaddr *) &socketAddress_, sizeof(struct sockaddr_in)) < 0)
+    if(bind(socketFd_,
+        (socketAddress_.isIpv6 ? (struct sockaddr *) &socketAddress_.socketAddrIn.sockAddrIpv6 :
+                                 (struct sockaddr *) &socketAddress_.socketAddrIn.sockAddrIpv4),
+        (socketAddress_.isIpv6 ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in))) < 0)
     {
       int theError(errno);
       std::cerr << "Error binding socket, errno: " << theError
@@ -69,7 +72,9 @@ int UdpSocketHandlerImpl::readSpecific(int sockFd, char *buffer)
                             buffer,
                             MAX_MESSAGE_LENGTH,
                             0, // flags
-                            (struct sockaddr *) &remoteAddress_,
+                            (remoteAddress_.isIpv6 ?
+                                 (struct sockaddr *) &remoteAddress_.socketAddrIn.sockAddrIpv6 :
+                                 (struct sockaddr *) &remoteAddress_.socketAddrIn.sockAddrIpv4),
                             &remoteAddrLen_));
 
   return numBytesRead;
@@ -82,7 +87,9 @@ int UdpSocketHandlerImpl::writeSpecific(int sockFd, char *buffer, int bufLength)
                              buffer,
                              bufLength,
                              0, // flags
-                             (struct sockaddr *) &remoteAddress_,
+                             (remoteAddress_.isIpv6 ?
+                                 (struct sockaddr *) &remoteAddress_.socketAddrIn.sockAddrIpv6 :
+                                 (struct sockaddr *) &remoteAddress_.socketAddrIn.sockAddrIpv4),
                              remoteAddrLen_));
 
   return numBytesWritten;

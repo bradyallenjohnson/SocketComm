@@ -9,6 +9,7 @@
 #include <string.h> // memcpy
 
 #include "EchoServerUdpMessageHandler.h"
+#include "SocketAddrIn.h"
 
 using namespace std;
 
@@ -25,7 +26,7 @@ EchoServerUdpMessageHandler::~EchoServerUdpMessageHandler()
 void EchoServerUdpMessageHandler::handleMessage(int clientKey,
                                                 char *requestMsg,
                                                 int requestMsgLength,
-                                                struct sockaddr_in *clientAddr,
+                                                const SocketAddrIn &clientAddr,
                                                 MessageHandler::SocketMessage *responseMsg) /* default NULL */
 {
   if(!responseMsg)

@@ -9,14 +9,17 @@
 #include <netinet/in.h>
 #include <arpa/inet.h> // for inet_pton()
 #include <errno.h>
+#include <unistd.h>
 
 #include "SocketHandler.h"
 #include "MessageHandler.h"
+#include "SocketAddrIn.h"
 
 using namespace std;
 
 const int SocketHandler::MAX_MESSAGE_LENGTH = 2048;
 const string SocketHandler::LOCAL_HOST_STR = "127.0.0.1";
+const string SocketHandler::LOCAL_HOST_IPV6_STR = "::1";
 
 SocketHandler::SocketHandler() :
   msgHandler_(NULL),
@@ -112,17 +115,45 @@ bool SocketHandler::initialize()
         return false;
   }
 
-  // configure the IP address and TCP/UDP port
-  memset(&socketAddress_, 0, sizeof(struct sockaddr_in));
-  socketAddress_.sin_family = AF_INET; // We're always going to use IP
-  socketAddress_.sin_port = htons(port_);
-  if(ipAddress_ == LOCAL_HOST_STR)
+  // Check if the ipAddress is IPV6
+  if (ipAddress_.find(":") != string::npos || ipAddress_.find("ip6") != string::npos)
   {
-    socketAddress_.sin_addr.s_addr = INADDR_ANY;
+      socketAddress_.isIpv6 = true;
+      remoteAddress_.isIpv6 = true;
+  }
+
+  // configure the IP address and TCP/UDP port
+  if (socketAddress_.isIpv6)
+  {
+    memset(&socketAddress_.socketAddrIn.sockAddrIpv6, 0, sizeof(struct sockaddr_in6));
+    socketAddress_.socketAddrIn.sockAddrIpv6.sin6_family = AF_INET6; // We're always going to use IP
+    socketAddress_.socketAddrIn.sockAddrIpv6.sin6_port = htons(port_);
   }
   else
   {
-    int retval(inet_pton(AF_INET, ipAddress_.c_str(), &socketAddress_.sin_addr));
+    memset(&socketAddress_.socketAddrIn.sockAddrIpv4, 0, sizeof(struct sockaddr_in));
+    socketAddress_.socketAddrIn.sockAddrIpv4.sin_family = AF_INET; // We're always going to use IP
+    socketAddress_.socketAddrIn.sockAddrIpv4.sin_port = htons(port_);
+  }
+
+  if(ipAddress_ == LOCAL_HOST_STR || ipAddress_ == LOCAL_HOST_IPV6_STR)
+  {
+    if (socketAddress_.isIpv6)
+    {
+      socketAddress_.socketAddrIn.sockAddrIpv6.sin6_addr = in6addr_any;
+    }
+    else
+    {
+      socketAddress_.socketAddrIn.sockAddrIpv4.sin_addr.s_addr = INADDR_ANY;
+    }
+  }
+  else
+  {
+    int retval(inet_pton((socketAddress_.isIpv6 ? AF_INET6 : AF_INET),
+                         ipAddress_.c_str(),
+                         (socketAddress_.isIpv6 ?
+                           (void *) &socketAddress_.socketAddrIn.sockAddrIpv6.sin6_addr :
+                           (void *) &socketAddress_.socketAddrIn.sockAddrIpv4.sin_addr)));
     if(retval != 1)
     {
       if(retval == 0)
@@ -313,7 +344,7 @@ void SocketHandler::run(int numMessagesToRead /*default 0*/)
         {
           ++stats_.numReads;
           // TODO remoteAddress_ is set in UdpSocketHandler, but not in TcpSocketHandler
-          msgHandler_->handleMessage(sockFd, msgBuffer, numBytesRead, &remoteAddress_);
+          msgHandler_->handleMessage(sockFd, msgBuffer, numBytesRead, remoteAddress_);
 
           // Set the socket for writing if the handler has a response available
           if(msgHandler_->hasOutgoingMessage(sockFd))

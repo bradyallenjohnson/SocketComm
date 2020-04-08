@@ -5,6 +5,7 @@
 #include <string.h> // strerror()
 #include <errno.h>
 #include <sys/socket.h>
+#include <unistd.h>
 
 #include "SocketHandler.h"
 #include "TcpSocketHandlerImpl.h"
@@ -27,7 +28,7 @@ TcpSocketHandlerImpl::TcpSocketHandlerImpl(int port,
 // virtual
 bool TcpSocketHandlerImpl::initializeSpecific()
 {
-  socketFd_ = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+  socketFd_ = socket((socketAddress_.isIpv6 ? AF_INET6 : AF_INET), SOCK_STREAM, IPPROTO_TCP);
   if(socketFd_ < 0)
   {
     int theError(errno); // stdio may reset the errno
@@ -39,7 +40,10 @@ bool TcpSocketHandlerImpl::initializeSpecific()
 
   if(mode_ == SocketHandler::MODE_SERVER)
   {
-    if(bind(socketFd_, (struct sockaddr *) &socketAddress_, sizeof(struct sockaddr_in)) < 0)
+    if(bind(socketFd_,
+        (socketAddress_.isIpv6 ? (struct sockaddr *) &socketAddress_.socketAddrIn.sockAddrIpv6 :
+                                 (struct sockaddr *) &socketAddress_.socketAddrIn.sockAddrIpv4),
+        (socketAddress_.isIpv6 ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in))) < 0)
     {
       int theError(errno);
       cerr << "Error binding socket, errno: " << theError
@@ -65,7 +69,10 @@ bool TcpSocketHandlerImpl::initializeSpecific()
   }
   else if(mode_ == SocketHandler::MODE_CLIENT)
   {
-    if(connect(socketFd_, (struct sockaddr *) &socketAddress_, sizeof(struct sockaddr_in)) < 0)
+    if(connect(socketFd_,
+        (socketAddress_.isIpv6 ? (struct sockaddr *) &socketAddress_.socketAddrIn.sockAddrIpv6 :
+                                 (struct sockaddr *) &socketAddress_.socketAddrIn.sockAddrIpv4),
+        (socketAddress_.isIpv6 ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in))) < 0)
     {
       int theError(errno);
       cerr << "Error Connecting to socket, errno: " << theError
@@ -88,7 +95,10 @@ bool TcpSocketHandlerImpl::initializeSpecific()
 // Will only be called when mode_ == MODE_SERVER
 void TcpSocketHandlerImpl::acceptConnection()
 {
-  int clientFd(accept(socketFd_, (sockaddr*) &remoteAddress_, (socklen_t*) &remoteAddrLen_));
+  int clientFd(accept(socketFd_,
+        (remoteAddress_.isIpv6 ? (sockaddr*) &remoteAddress_.socketAddrIn.sockAddrIpv6 :
+                                 (sockaddr*) &remoteAddress_.socketAddrIn.sockAddrIpv4),
+        (socklen_t*) &remoteAddrLen_));
   remoteSockFdList_.push_back(clientFd);
   ++stats_.numConnects;
 

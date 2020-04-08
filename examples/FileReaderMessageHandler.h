@@ -12,6 +12,7 @@
 #include <list>
 
 #include "MessageHandler.h"
+#include "SocketAddrIn.h"
 
 using namespace std;
 
@@ -24,7 +25,7 @@ public:
   virtual void handleMessage(int remoteKey,
                              char *requestMsg,
                              int requestMsgLength,
-                             struct sockaddr_in *clientAddr,
+                             const SocketAddrIn &clientAddr,
                              MessageHandler::SocketMessage *responseMsg);
   virtual void handleTimeout();
   virtual MessageHandler::SocketMessage *getMessage(int remoteKey);

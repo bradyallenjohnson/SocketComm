@@ -10,3 +10,10 @@
 *.lai
 *.la
 *.a
+
+.sconsign.dblite
+.cproject
+.project
+.settings
+examples/exampleTcpClientMain
+examples/exampleTcpServerMain

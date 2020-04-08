@@ -8,6 +8,8 @@
 #include <sys/types.h>
 #include <netinet/in.h>
 
+#include "SocketAddrIn.h"
+
 using namespace std;
 
 //
@@ -46,13 +48,13 @@ public:
   virtual void handleMessage(int remoteKey,
                              char *msg,
                              int msgLength,
-                             struct sockaddr_in *remoteAddr,
+                             const SocketAddrIn &remoteAddr,
                              MessageHandler::SocketMessage *responseMsg = 0) = 0;
   virtual void handleTimeout() = 0;
 
   // Called to accept connections/disconnects, default behavior is provided
   // May never be called from some protocols, thus they arent pure virtual
-  virtual void handleConnect(int remoteKey, const struct sockaddr_in &remoteAddr, socklen_t remoteAddrLen) {};
+  virtual void handleConnect(int remoteKey, const SocketAddrIn &remoteAddr, socklen_t remoteAddrLen) {};
   virtual void handleDisconnect(int remoteKey) {};
 
   // Called to get a message to write to the remote end

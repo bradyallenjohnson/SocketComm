@@ -9,6 +9,7 @@
 #define	ECHO_UDP_SERVERHANDLER_H
 
 #include "MessageHandler.h"
+#include "SocketAddrIn.h"
 
 class EchoServerUdpMessageHandler : public MessageHandler
 {
@@ -19,7 +20,7 @@ public:
   virtual void handleMessage(int clientKey,
                              char *requestMsg,
                              int requestMsgLength,
-                             struct sockaddr_in *clientAddr,
+                             const SocketAddrIn &clientAddr,
                              MessageHandler::SocketMessage *responseMsg);
   virtual void handleTimeout();
 };

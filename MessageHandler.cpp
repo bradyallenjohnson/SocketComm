@@ -12,10 +12,11 @@ MessageHandler::MessageHandler() :
 MessageHandler::~MessageHandler()
 {
   ResponseMessageMapType::iterator iter;
-  for(iter = responseMessageMap_.begin(); iter != responseMessageMap_.end(); ++iter)
+  for(iter = responseMessageMap_.begin(); iter != responseMessageMap_.end(); )
   {
     delete iter->second;
-    responseMessageMap_.erase(iter);
+    // erase() makes the iter invalid, use the returned iter
+    iter = responseMessageMap_.erase(iter);
   }
 }
 

@@ -7,7 +7,7 @@ sourceFiles = [
     'UdpSocketHandlerImpl.cpp',
 ]
 
-env.Append(CPPPATH = '#.', CPPFLAGS = '-O2')
+env.Append(CPPPATH = '#.', CPPFLAGS = ['-O2', '-g'])
 libTarget = env.Library(target = 'socketComm', source = sourceFiles)
 env.Default(libTarget)
 env.Alias('library', libTarget)

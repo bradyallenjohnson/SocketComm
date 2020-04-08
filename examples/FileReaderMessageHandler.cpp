@@ -13,6 +13,7 @@
 
 #include "SocketHandler.h"
 #include "FileReaderMessageHandler.h"
+#include "SocketAddrIn.h"
 
 using namespace std;
 
@@ -97,7 +98,7 @@ MessageHandler::SocketMessage *FileReaderMessageHandler::getMessage(int remoteKe
 void FileReaderMessageHandler::handleMessage(int clientKey,
                                              char *requestMsg,
                                              int requestMsgLength,
-                                             struct sockaddr_in *clientAddr,
+                                             const SocketAddrIn &clientAddr,
                                              MessageHandler::SocketMessage *responseMsg)
 {
   if(isDebug_)
