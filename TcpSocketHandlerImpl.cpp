@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <netinet/tcp.h>
 
 #include "SocketHandler.h"
 #include "TcpSocketHandlerImpl.h"
@@ -38,55 +39,96 @@ bool TcpSocketHandlerImpl::initializeSpecific()
     return false;
   }
 
+  // RFC 2385 TCP MD5 Authentication
+  if(!tcpMd5AuthStr_.empty())
+  {
+    struct tcp_md5sig sig;
+    memset(&sig, 0, sizeof(sig));
+    memcpy(&sig.tcpm_addr,
+           (socketAddress_.isIpv6 ? (struct sockaddr *) &socketAddress_.socketAddrIn.sockAddrIpv6 :
+                                    (struct sockaddr *) &socketAddress_.socketAddrIn.sockAddrIpv4),
+           (socketAddress_.isIpv6 ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in)));
+
+    if(mode_ == SocketHandler::MODE_SERVER)
+    {
+      sig.tcpm_flags = TCP_MD5SIG_FLAG_PREFIX;
+      sig.tcpm_prefixlen = 0; // Match any address.
+    }
+    sig.tcpm_keylen = tcpMd5AuthStr_.length();
+    memcpy(sig.tcpm_key, tcpMd5AuthStr_.c_str(), sig.tcpm_keylen);
+    if (setsockopt(socketFd_, IPPROTO_TCP, TCP_MD5SIG_EXT, &sig, sizeof(sig)) == -1) {
+      cerr << "Failed to setsockopt(): " << strerror(errno) << endl;
+      return false;
+    }
+  }
+
+  // Client / Server specific actions
   if(mode_ == SocketHandler::MODE_SERVER)
   {
-    if(bind(socketFd_,
-        (socketAddress_.isIpv6 ? (struct sockaddr *) &socketAddress_.socketAddrIn.sockAddrIpv6 :
-                                 (struct sockaddr *) &socketAddress_.socketAddrIn.sockAddrIpv4),
-        (socketAddress_.isIpv6 ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in))) < 0)
-    {
-      int theError(errno);
-      cerr << "Error binding socket, errno: " << theError
-           << ", " << strerror(theError)
-           << endl;
-      return false;
-    }
-
-    // max socket backlog of 5
-    if(listen(socketFd_, 5) < 0)
-    {
-      int theError(errno);
-      cerr << "Error listening on socket, errno: " << theError
-           << ", " << strerror(theError)
-           << endl;
-      return false;
-    }
-
-    if(isDebug())
-    {
-      cout << "TCP server successfully bound to port: " << port_ << endl;
-    }
+      return initializeSpecificServer();
   }
   else if(mode_ == SocketHandler::MODE_CLIENT)
   {
-    if(connect(socketFd_,
-        (socketAddress_.isIpv6 ? (struct sockaddr *) &socketAddress_.socketAddrIn.sockAddrIpv6 :
-                                 (struct sockaddr *) &socketAddress_.socketAddrIn.sockAddrIpv4),
-        (socketAddress_.isIpv6 ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in))) < 0)
-    {
-      int theError(errno);
-      cerr << "Error Connecting to socket, errno: " << theError
-           << ", " << strerror(theError)
-           << endl;
-      return false;
-    }
+      return initializeSpecificClient();
+  }
 
-    FD_SET(socketFd_, &allSocketFdWriteSet_);
+  cerr << "Error: Unknown SocketHandler mode: " << mode_
+       << endl;
 
-    if(isDebug())
-    {
-      cout << "TCP client successfully connected to server." << endl;
-    }
+  return false;
+}
+
+bool TcpSocketHandlerImpl::initializeSpecificClient()
+{
+  if(connect(socketFd_,
+      (socketAddress_.isIpv6 ? (struct sockaddr *) &socketAddress_.socketAddrIn.sockAddrIpv6 :
+                               (struct sockaddr *) &socketAddress_.socketAddrIn.sockAddrIpv4),
+      (socketAddress_.isIpv6 ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in))) < 0)
+  {
+    int theError(errno);
+    cerr << "Error Connecting to socket, errno: " << theError
+         << ", " << strerror(theError)
+         << endl;
+    return false;
+  }
+
+  FD_SET(socketFd_, &allSocketFdWriteSet_);
+
+  if(isDebug())
+  {
+    cout << "TCP client successfully connected to server." << endl;
+  }
+
+  return true;
+}
+
+bool TcpSocketHandlerImpl::initializeSpecificServer()
+{
+  if(bind(socketFd_,
+      (socketAddress_.isIpv6 ? (struct sockaddr *) &socketAddress_.socketAddrIn.sockAddrIpv6 :
+                               (struct sockaddr *) &socketAddress_.socketAddrIn.sockAddrIpv4),
+      (socketAddress_.isIpv6 ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in))) < 0)
+  {
+    int theError(errno);
+    cerr << "Error binding socket, errno: " << theError
+         << ", " << strerror(theError)
+         << endl;
+    return false;
+  }
+
+  // max socket backlog of 5
+  if(listen(socketFd_, 5) < 0)
+  {
+    int theError(errno);
+    cerr << "Error listening on socket, errno: " << theError
+         << ", " << strerror(theError)
+         << endl;
+    return false;
+  }
+
+  if(isDebug())
+  {
+    cout << "TCP server successfully bound to port: " << port_ << endl;
   }
 
   return true;

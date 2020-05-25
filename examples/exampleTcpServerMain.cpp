@@ -22,6 +22,7 @@ using namespace std;
 const string ARG_IP_ADDRESS  = "-a";
 const string ARG_LISTEN_PORT = "-p";
 const string ARG_VERBOSE     = "-v";
+const string ARG_TCP_MD5     = "-tcpmd5";
 
 // Global SocketServer pointer to be used in the application signal handler
 SocketHandler *SOCKET_SERVER = NULL;
@@ -30,6 +31,7 @@ struct ConfigInput
 {
   string    ipAddress;
   uint16_t  listenPort;
+  string    tcpMd5Auth;
   bool      isVerbose;
   ConfigInput() : ipAddress("127.0.0.1"), listenPort(3868), isVerbose(false) {}
 };
@@ -48,6 +50,12 @@ void loadCmdLine(CmdLineParser &clp)
   clp.addCmdLineOption(new CmdLineOptionInt(ARG_LISTEN_PORT,
                                             string("TCP port to listen on"),
                                             3868));
+
+     // TCP MD5 Authentication: RFC 2385
+  clp.addCmdLineOption(new CmdLineOptionStr(ARG_TCP_MD5,
+                                            string("TCP MD5 authentication, RFC 2385"),
+                                            string("")));
+
      // Verbosity
   clp.addCmdLineOption(new CmdLineOptionFlag(ARG_VERBOSE,
                                              string("Turn on verbosity"),
@@ -64,6 +72,7 @@ bool parseCommandLine(int argc, char **argv, CmdLineParser &clp, ConfigInput &co
 
   config.ipAddress  =  ((CmdLineOptionStr*)  clp.getCmdLineOption(ARG_IP_ADDRESS))->getValue();
   config.listenPort =  ((CmdLineOptionInt*)  clp.getCmdLineOption(ARG_LISTEN_PORT))->getValue();
+  config.tcpMd5Auth =  ((CmdLineOptionStr*)  clp.getCmdLineOption(ARG_TCP_MD5))->getValue();
   config.isVerbose  =  ((CmdLineOptionFlag*) clp.getCmdLineOption(ARG_VERBOSE))->getValue();
 
   return true;
@@ -138,6 +147,7 @@ int main(int argc, char** argv)
   server->setMessageHandler(msgHandler);
   server->setHandlerMode(SocketHandler::MODE_SERVER);
   server->setDebug(input.isVerbose);
+  ((TcpSocketHandlerImpl *) server)->setTcpMd5AuthStr(input.tcpMd5Auth);
 
   if(!server->initialize())
   {

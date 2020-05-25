@@ -28,7 +28,10 @@ SocketHandler::SocketHandler() :
   ipAddress_(LOCAL_HOST_STR),
   socketFd_(-1),
   isDebug_(false),
+  timeout_sec_(0),
   timeout_msec_(0),
+  timeout_usec_(0),
+  remoteAddrLen_(0),
   tval_(NULL),
   runHandler_(true),
   isInitialized_(false),
@@ -47,7 +50,10 @@ SocketHandler::SocketHandler(int port,
   maxFd_(0),
   ipAddress_(ipAddr),
   isDebug_(false),
+  timeout_sec_(0),
   timeout_msec_(timeout_millis),
+  timeout_usec_(0),
+  remoteAddrLen_(0),
   tval_(NULL),
   runHandler_(true),
   isInitialized_(false),
@@ -138,6 +144,7 @@ bool SocketHandler::initialize()
 
   if(ipAddress_ == LOCAL_HOST_STR || ipAddress_ == LOCAL_HOST_IPV6_STR)
   {
+    // Notice: this wont work for TCP clients with TCP-MD5, a specific IP should be used
     if (socketAddress_.isIpv6)
     {
       socketAddress_.socketAddrIn.sockAddrIpv6.sin6_addr = in6addr_any;
@@ -173,8 +180,8 @@ bool SocketHandler::initialize()
   }
 
   // The remote address will be used by the derived classes
-  memset(&remoteAddress_, 0, sizeof(struct sockaddr_in));
-  remoteAddrLen_ = sizeof(struct sockaddr_in);
+  remoteAddrLen_ = socketAddress_.isIpv6 ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in);
+  memset(&remoteAddress_, 0, remoteAddrLen_);
 
   // Configure the timeout if specified
   if(timeout_msec_ > 0)

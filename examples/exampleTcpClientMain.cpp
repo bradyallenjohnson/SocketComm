@@ -22,6 +22,7 @@ using namespace std;
 const string ARG_IP_ADDRESS  = "-a";
 const string ARG_LISTEN_PORT = "-p";
 const string ARG_VERBOSE     = "-v";
+const string ARG_TCP_MD5     = "-tcpmd5";
 
 // Global SocketClient pointer to be used in the application signal handler
 SocketHandler *SOCKET_CLIENT = NULL;
@@ -30,6 +31,7 @@ struct ConfigInput
 {
   string    ipAddress;
   uint16_t  remotePort;
+  string    tcpMd5Auth;
   bool      isVerbose;
   ConfigInput() : ipAddress("127.0.0.1"), remotePort(3868), isVerbose(false) {}
 };
@@ -48,6 +50,12 @@ void loadCmdLine(CmdLineParser &clp)
   clp.addCmdLineOption(new CmdLineOptionInt(ARG_LISTEN_PORT,
                                             string("TCP port to connect to"),
                                             3868));
+
+  // TCP MD5 Authentication: RFC 2385
+  clp.addCmdLineOption(new CmdLineOptionStr(ARG_TCP_MD5,
+                                            string("TCP MD5 authentication, RFC 2385"),
+                                            string("")));
+
     // Verbosity
   clp.addCmdLineOption(new CmdLineOptionFlag(ARG_VERBOSE,
                                              string("Turn on verbosity"),
@@ -62,8 +70,9 @@ bool parseCommandLine(int argc, char **argv, CmdLineParser &clp, ConfigInput &co
     return false;
   }
 
-  config.ipAddress  =  ((CmdLineOptionStr*)  clp.getCmdLineOption(ARG_IP_ADDRESS))->getValue();
+  config.ipAddress  = ((CmdLineOptionStr*)  clp.getCmdLineOption(ARG_IP_ADDRESS))->getValue();
   config.remotePort = ((CmdLineOptionInt*)  clp.getCmdLineOption(ARG_LISTEN_PORT))->getValue();
+  config.tcpMd5Auth = ((CmdLineOptionStr*)  clp.getCmdLineOption(ARG_TCP_MD5))->getValue();
   config.isVerbose =  ((CmdLineOptionFlag*) clp.getCmdLineOption(ARG_VERBOSE))->getValue();
 
   return true;
@@ -131,12 +140,13 @@ int main(int argc, char** argv)
   //
   // Create and Initialize the SocketHandler and MessageHandler
   //
-  SocketHandler *client = new TcpSocketHandlerImpl(input.remotePort, input.ipAddress);
+  SocketHandler *client = new TcpSocketHandlerImpl(input.remotePort, input.ipAddress, 0, SocketHandler::MODE_CLIENT);
   MessageHandler *msgHandler = new FileReaderMessageHandler("exampleFileData.txt");
   msgHandler->setDebug(input.isVerbose);
   client->setMessageHandler(msgHandler);
   client->setHandlerMode(SocketHandler::MODE_CLIENT);
   client->setDebug(input.isVerbose);
+  ((TcpSocketHandlerImpl *) client)->setTcpMd5AuthStr(input.tcpMd5Auth);
 
   if(!client->initialize())
   {
